@@ -5,7 +5,9 @@
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-
+import {
+  MD3LightTheme as DefaultTheme,
+} from 'react-native-paper';
 export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: keyof typeof Colors.light & keyof typeof Colors.dark
@@ -19,3 +21,10 @@ export function useThemeColor(
     return Colors[theme][colorName];
   }
 }
+export const PaperTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: '#477B72'
+  },
+};
