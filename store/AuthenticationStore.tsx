@@ -40,7 +40,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
             }),
             credentials: 'include'
         })
-            .then(async res => res.status < 300 ? res.json() : Promise.reject({ statusCode: res.status, body: await res.json() }))
+            .then(async res => res.status < 300 ? res.json() : Promise.reject({ status: res.status, body: await res.json() }))
             .then(data => setSession(data.accessToken));
     }
     return (

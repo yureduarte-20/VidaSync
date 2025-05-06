@@ -52,16 +52,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="medication"
         options={{
           title: 'Medicamentos',
           tabBarIcon: ({ color }) => <MaterialCommunityIcons name="pill" size={28} color={color} /> ,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="settings"
         options={{
-          title: 'Explore',
+          title: 'Configurações',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />
