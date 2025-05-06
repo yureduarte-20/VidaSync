@@ -1,27 +1,15 @@
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { PaperTheme } from '@/hooks/useThemeColor';
+import { SessionProvider } from '@/store/AuthenticationStore';
+import { Slot } from 'expo-router';
+import React from 'react';
 import { Provider as PaperProvider } from 'react-native-paper';
-import 'react-native-reanimated';
-import { PaperTheme } from '../hooks/useThemeColor';
-export default function RootLayout() {
-  
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
-
-  return (
-    <PaperProvider theme={PaperTheme}>
-      <Stack>
-
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </PaperProvider>
-  );
+export default function Root() {
+   
+    return (
+        <PaperProvider theme={PaperTheme}>
+            <SessionProvider>
+                <Slot />
+            </SessionProvider>
+        </PaperProvider>
+    )
 }
