@@ -33,6 +33,7 @@ export const MedicationContext = createContext<MedicationContextType>({
 export function MedicationProvider(props: PropsWithChildren) {
     const [medications, setMedication] = useState<MedicationType[]>([]);
     const [schedules, setSchedules] = useState<Schedule[]>([])
+    
     const addMedication = async (medication: MedicationType) => {
         medication.id = Math.floor(Math.random() * 100_000)
         setMedication(state => [...state, medication])
