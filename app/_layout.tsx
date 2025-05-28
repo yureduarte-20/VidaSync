@@ -34,7 +34,7 @@ function RootNavigator() {
                 headerShown: false
             }} />
             <Stack.Screen name='(medications)' options={{
-                title: 'Adicionar Medicamentos'
+               headerShown: false
             }} />
         </Stack.Protected>
     </Stack>
