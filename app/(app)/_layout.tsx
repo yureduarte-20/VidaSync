@@ -6,9 +6,9 @@ export const unstable_settings = {
 export default function RootLayout() {
 
 
-  return <Stack >
-    <Stack.Screen name="(medications)" options={{ headerShown: false }} />
+  return <Stack  initialRouteName='sign-in'>
     <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+    <Stack.Screen name="(medications)" options={{ headerShown: false }} />
     <Stack.Screen name="sign-in" options={{ headerShown: false }} />
   </Stack>;
 }

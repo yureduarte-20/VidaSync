@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FlatList, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Card, Divider, IconButton, Text, useTheme } from 'react-native-paper';
 
-interface SelectOption {
+export interface SelectOption {
     label: string;
     value: string | number;
 }

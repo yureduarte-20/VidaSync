@@ -1,14 +1,23 @@
+import MedicationList from '@/components/ui/MedicationList';
 import { useSession } from '@/store/AuthenticationStore';
-import { SafeAreaView, StyleSheet, Text } from 'react-native';
-import { Button } from 'react-native-paper';
+import { useMedicationStore } from '@/store/MedicationStore';
+import Constants from 'expo-constants';
+import { useEffect } from 'react';
+import { SafeAreaView, StyleSheet } from 'react-native';
 
 export default function HomeScreen() {
   const { signOut } = useSession()
+  const { getMedications, medications } = useMedicationStore()
+  useEffect(() => {
+    getMedications()
+    .then(console.log)
+  }, [])
+  
   return (
-    <SafeAreaView style={{ flex:1, alignItems: 'center', justifyContent: 'center' }}>
-        <Button mode='contained' onPress={() => signOut()}>
-            <Text>OK</Text>
-        </Button>
+    <SafeAreaView style={{ flex:1, paddingTop: Constants.statusBarHeight }}>
+
+            <MedicationList medications={medications} />
+        
     </SafeAreaView>
   );
 }

@@ -1,7 +1,11 @@
-import { createContext, use, type PropsWithChildren } from 'react';
+import { useFetcher } from '@/hooks/useFetcher';
+import { useRoute } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { createContext, use, useCallback, useEffect, type PropsWithChildren } from 'react';
 import { useStorageState } from '../hooks/useStorageState';
+import { useSnackbar } from './SnackbarContext';
 export type Credentials = {
-    login: string;
+    email: string;
     password: string;
 }
 const AuthContext = createContext<{
@@ -28,21 +32,42 @@ export function useSession() {
 
 export function SessionProvider({ children }: PropsWithChildren) {
     const [[isLoading, session], setSession] = useStorageState('session');
+    const fetcher = useCallback(useFetcher, []);
+    const router = useRouter()
+    const route = useRoute()
+    const  { showSnackbar } = useSnackbar()
+    useEffect(() => {
+        if (!isLoading && session) {
+            showSnackbar("Recuperando informações de login", 1000)
+            fetcher({
+                uri: '/user',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + session
+                }
+            })
+                .then((data) => {
+                    console.log(data)
+                    route.name == '__root' && router.replace('/(app)/(tabs)/medication')
+                })
+                .catch(console.error)
+        }
+    }, [isLoading])
     async function sigIn(credentials: Credentials) {
-        return fetch('https://dummyjson.com/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        try {
+            const { body } = await fetcher({
+                uri: '/login',
+                method: 'POST',
+                data: JSON.stringify(credentials)
+            })
+            setSession(body.accessToken)
+            return body
+        } catch (e: any) {
+            throw e;
+        }
 
-                username: credentials.login,
-                password: credentials.password,
-                expiresInMins: 30
-            }),
-            credentials: 'include'
-        })
-            .then(async res => res.status < 300 ? res.json() : Promise.reject({ status: res.status, body: await res.json() }))
-            .then(data => setSession(data.accessToken));
     }
+
     return (
         <AuthContext
             value={{
