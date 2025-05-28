@@ -26,7 +26,7 @@ export default function TabLayout() {
     </SafeAreaView>;
   }
   if (!session) {
-    return <Redirect href="/sign-in" />;
+    return <Redirect href="/" />;
   }
   
   return (
