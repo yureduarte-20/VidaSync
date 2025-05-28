@@ -1,11 +1,10 @@
 import { PaperTheme } from '@/hooks/useThemeColor';
-import { SessionProvider } from '@/store/AuthenticationStore';
+import { SessionProvider, useSession } from '@/store/AuthenticationStore';
 import { MedicationProvider } from '@/store/MedicationStore';
 import { SnackbarProvider } from '@/store/SnackbarContext';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import React from 'react';
 import { Provider as PaperProvider } from 'react-native-paper';
-
 export default function Root() {
 
     return (
@@ -13,10 +12,31 @@ export default function Root() {
             <SnackbarProvider>
                 <SessionProvider>
                     <MedicationProvider>
-                        <Slot />
+                        <RootNavigator />
                     </MedicationProvider>
                 </SessionProvider>
             </SnackbarProvider>
         </PaperProvider>
     )
 }
+
+function RootNavigator() {
+    const { session } = useSession();
+    const isLoggedIn = Boolean(session).valueOf()
+    return <Stack >
+        <Stack.Protected guard={!isLoggedIn}>
+            <Stack.Screen name="index" options={{
+                headerShown: false
+            }} />
+        </Stack.Protected>
+        <Stack.Protected guard={isLoggedIn}>
+            <Stack.Screen name='(tabs)' options={{
+                headerShown: false
+            }} />
+            <Stack.Screen name='(medications)' options={{
+                title: 'Adicionar Medicamentos'
+            }} />
+        </Stack.Protected>
+    </Stack>
+}
+

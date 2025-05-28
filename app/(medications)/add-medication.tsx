@@ -47,7 +47,7 @@ export default function AddMedication() {
             }
             await createSchedule(schedule)
             ToastAndroid.show('Cadastrado', ToastAndroid.SHORT)
-            router.replace('/(app)/(tabs)/programados')
+            router.replace('/(tabs)/programados')
         } catch (e: any) {
             if (e.code == 'RESPONSE_ERROR') {
                 showSnackbar(e.body.message)

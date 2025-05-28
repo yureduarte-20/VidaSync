@@ -13,7 +13,7 @@ export default function SignIn() {
   const onSubmit = async () => {
     try{
       await signIn(credentials)
-        .then(e => router.replace('/(app)/(tabs)/programados'))
+        .then(e => router.replace('/(tabs)/programados'))
     } catch(e : any){
       if(e.code == 'NETWORK_ERROR'){
         showSnackbar(e.message)

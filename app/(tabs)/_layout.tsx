@@ -14,7 +14,7 @@ export default function TabLayout() {
   const { session, isLoading } = useSession();
 
   const [loaded] = useFonts({
-    SpaceMono: require('../../../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
   if (!loaded) {
