@@ -1,4 +1,5 @@
 import { useFetcher } from "@/hooks/useFetcher";
+import moment from "moment";
 import React, { createContext, PropsWithChildren, useCallback, useEffect, useState } from "react";
 import { useSession } from "./AuthenticationStore";
 import { useSnackbar } from "./SnackbarContext";
@@ -11,9 +12,7 @@ export type MedicationType = {
     reminders?: Schedule[]
 }
 export type Presentation = MedicationType['presentation']
-export enum WeekDay {
-    MON = "SEGUNDA", TUE = "TERÇA", WED = "QUARTA", THU = "QUINTA", FRI = "SEXTA", SAT = "SÁBADO", SUN = "DOMINGO"
-}
+export type WeekDay = 'MON' | "TUE" | "WED" | "THU" | "FRI" | "SAT"| "SUN";
 export type MedicationIdType = MedicationType['id'];
 export type Schedule = {
     id?: number
@@ -23,16 +22,20 @@ export type Schedule = {
     hour: string,
     reminder_type: "SCHEDULED" | "SINGLE",
     date?: string | Date,
-    medication_id: number
+    medication_id: number;
+    medication?: MedicationType
 };
+
 export type ScheduleIdType = Schedule['id'];
+export type ReminderType = Schedule['reminder_type']
 export type MedicationContextType = {
     medications: MedicationType[],
     schedules: Schedule[];
     addMedication(medication: MedicationType): Promise<MedicationType>;
     createSchedule(schedule: Schedule): Promise<Schedule>;
     findMedication(id: MedicationIdType): Promise<MedicationType>
-    getMedications() : Promise<MedicationType[]> 
+    getMedications(): Promise<MedicationType[]>
+    getSchedulers() : Promise<Schedule[]>
 };
 export const MedicationContext = createContext<MedicationContextType>({
     medications: [],
@@ -40,6 +43,7 @@ export const MedicationContext = createContext<MedicationContextType>({
     addMedication: () => Promise.reject('not implemented'),
     createSchedule: (schedule: Schedule) => Promise.reject('not implemented'),
     findMedication: (id: MedicationIdType) => Promise.reject('not implemented'),
+    getSchedulers: () => Promise.reject('not implemented'),
     getMedications: () => Promise.reject('not implemented')
 });
 
@@ -48,17 +52,20 @@ export function MedicationProvider(props: PropsWithChildren) {
     const [schedules, setSchedules] = useState<Schedule[]>([])
     const { showSnackbar } = useSnackbar()
     const fetcher = useCallback(useFetcher, [])
-    const { session } = useSession()
+    const { session, isLoading, } = useSession()
     useEffect(() => {
-        getSchedulers()
-        getMedications()
-    }, [])
+        if (!isLoading && session) {
+            getSchedulers()
+            getMedications()
+        }
+    }, [session, isLoading])
     const getMedications = async () => {
-        const { body } = await fetcher<MedicationType[]>({ uri: '/medication?paginate=false', method: 'GET', 
-                headers: {
-                    'Authorization': 'Bearer ' + session
-                }
-         })
+        const { body } = await fetcher<MedicationType[]>({
+            uri: '/medication?paginate=false', method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + session
+            }
+        })
         setMedication(body)
         return body;
     }
@@ -73,9 +80,9 @@ export function MedicationProvider(props: PropsWithChildren) {
             await getMedications();
             return body;
         } catch (e: any) {
-           if (e.code == 'RESPONSE_ERROR') {
+            if (e.code == 'RESPONSE_ERROR') {
                 showSnackbar(e.body.message)
-            } else if(e.code == 'NETWORK_ERROR') {
+            } else if (e.code == 'NETWORK_ERROR') {
                 showSnackbar(e.message)
             }
             throw e
@@ -84,26 +91,33 @@ export function MedicationProvider(props: PropsWithChildren) {
     const getSchedulers = async () => {
         try {
             const { body } = await fetcher<Schedule[]>({
-                uri: '/medication-reminder?paginated=false',
+                uri: '/medication-reminder?paginate=false',
                 method: 'GET',
                 headers: {
                     'Authorization': 'Bearer ' + session
                 }
             })
             setSchedules(body)
+            return body
         } catch (e: any) {
             if (e.code == 'RESPONSE_ERROR') {
                 showSnackbar(e.body.message)
-            } else if(e.code == 'NETWORK_ERROR') {
+            } else if (e.code == 'NETWORK_ERROR') {
                 showSnackbar(e.message)
             }
+            console.log(e)
             throw e;
         }
     }
     const createSchedule = async (schedule: Schedule) => {
         try {
+            const contentBody = {
+                ...schedule,
+                hour: moment(schedule.hour).format('HH:mm'),
+                date: moment(schedule.date).format('YYYY-MM-DD')
+            }
             const { body } = await fetcher({
-                uri: '/medication-reminder', method: 'POST', data: schedule,
+                uri: '/medication-reminder', method: 'POST', data: contentBody,
                 headers: {
                     'Authorization': 'Bearer ' + session
                 }
@@ -111,10 +125,10 @@ export function MedicationProvider(props: PropsWithChildren) {
             await getSchedulers()
             return body;
         } catch (e: any) {
-           if (e.code == 'RESPONSE_ERROR') {
+            if (e.code == 'RESPONSE_ERROR') {
                 showSnackbar(e.body.message)
-            } else if(e.code == 'NETWORK_ERROR') {
-                showSnackbar(e.message ?? '')
+            } else if (e.code == 'NETWORK_ERROR') {
+                showSnackbar(e.message)
             }
             throw e;
         }
@@ -130,7 +144,7 @@ export function MedicationProvider(props: PropsWithChildren) {
         return body;
     }
     return (
-        <MedicationContext.Provider value={{ medications: medications,  addMedication, createSchedule, findMedication, schedules, getMedications }}>
+        <MedicationContext.Provider value={{ getSchedulers, medications: medications, addMedication, createSchedule, findMedication, schedules, getMedications }}>
             {props.children}
         </MedicationContext.Provider>
     )

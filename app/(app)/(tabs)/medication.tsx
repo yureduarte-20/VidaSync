@@ -10,14 +10,11 @@ export default function HomeScreen() {
   const { getMedications, medications } = useMedicationStore()
   useEffect(() => {
     getMedications()
-    .then(console.log)
   }, [])
-  
-  return (
-    <SafeAreaView style={{ flex:1, paddingTop: Constants.statusBarHeight }}>
 
-            <MedicationList medications={medications} />
-        
+  return (
+    <SafeAreaView style={{ flex: 1, paddingTop: Constants.statusBarHeight }}>
+      <MedicationList medications={medications} />
     </SafeAreaView>
   );
 }

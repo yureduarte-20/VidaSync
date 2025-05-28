@@ -1,15 +1,15 @@
 import Select, { SelectOption } from "@/components/ui/Select";
-import { MedicationType, Presentation, Schedule, useMedicationStore } from "@/store/MedicationStore";
+import { MedicationType, Presentation, Schedule, useMedicationStore, WeekDay } from "@/store/MedicationStore";
 import { useSnackbar } from "@/store/SnackbarContext";
 import RNDateTimePicker from '@react-native-community/datetimepicker';
 import { router } from "expo-router";
 import moment from "moment";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { SafeAreaView, ToastAndroid, View } from "react-native";
-import { Button, Switch, Text, TextInput } from "react-native-paper";
+import { ActivityIndicator, Button, Switch, Text, TextInput } from "react-native-paper";
 
 export default function AddMedication() {
-    const { addMedication, medications } = useMedicationStore()
+    const { addMedication, medications, createSchedule } = useMedicationStore()
     const [isLoading, setIsLoading] = useState(false)
     const [medication, setMedication] = useState<MedicationType>({
         presentation: 'CAPSULE',
@@ -17,6 +17,7 @@ export default function AddMedication() {
 
     })
     const [picker, setPicker] = useState(false)
+    const [pickerDate, setPickerDate] = useState(false)
     const { showSnackbar } = useSnackbar()
     const [schedule, setSchedule] = useState<Schedule>({
         dose: '',
@@ -28,6 +29,9 @@ export default function AddMedication() {
     })
 
     const [modeMedication, setModeMedication] = useState(medications.length <= 0)
+    const toggleMode = () => {
+        setFieldSchedule('reminder_type', schedule.reminder_type === 'SCHEDULED' ? 'SINGLE' : 'SCHEDULED')
+    }
     const setFieldMedication = (field: keyof MedicationType, value: any) => {
         setMedication(state => ({ ...state, [field]: value }))
     }
@@ -37,13 +41,22 @@ export default function AddMedication() {
     const add = async () => {
         try {
             setIsLoading(true)
-            await addMedication(medication)
+            if (modeMedication) {
+                const { id } = await addMedication(medication)
+                schedule.medication_id = id as number
+            }
+            await createSchedule(schedule)
             ToastAndroid.show('Cadastrado', ToastAndroid.SHORT)
             router.replace('/(app)/(tabs)/programados')
-        } catch(e : any){
-            console.log(e)
+        } catch (e: any) {
+            if (e.code == 'RESPONSE_ERROR') {
+                showSnackbar(e.body.message)
+                console.log(e.body)
+            }
+        } finally {
+            setIsLoading(false)
         }
-        
+
     }
 
     const options: { label: string, value: Presentation }[] = [
@@ -51,6 +64,15 @@ export default function AddMedication() {
         { label: 'Comprimido', value: 'TABLET' },
         { label: 'Solvente', value: 'SOLVENT' },
     ];
+    const weekDayOptions: { label: string, value: WeekDay }[] = useMemo(() => ([
+        { value: 'MON', label: 'Segunda' },
+        { value: 'TUE', label: 'Terça' },
+        { value: 'WED', label: 'Quarta' },
+        { value: 'THU', label: 'Quinta' },
+        { value: 'FRI', label: 'Sexta' },
+        { value: 'SAT', label: 'Sábado' },
+        { value: 'SUN', label: 'Domingo' }
+    ]), []);
     const onToggleSwitch = () => setModeMedication(state => !state);
     return (
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 15 }}>
@@ -79,7 +101,7 @@ export default function AddMedication() {
                     <>
                         <Select
                             label="Medicamento*"
-                            options={medications.map((medication : MedicationType) : SelectOption => ({ label: medication.name, value: medication.id!  }))}
+                            options={medications.map((medication: MedicationType): SelectOption => ({ label: medication.name, value: medication.id! }))}
                             value={schedule.medication_id}
                             onSelect={(option) => setFieldSchedule('medication_id', option.value)}
                             placeholder="Escolha uma opção"
@@ -87,20 +109,58 @@ export default function AddMedication() {
                     </>
                 )
             }
+
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text>Apenas uma vez</Text>
+                <Switch value={schedule.reminder_type == 'SCHEDULED'} onValueChange={toggleMode} />
+                <Text>Agendado</Text>
+            </View>
             <Button mode="contained" style={{ marginBottom: 10 }} onPress={() => setPicker(state => !state)}>
                 Horário Selecionado: {moment(schedule.hour).format('HH:mm')}
             </Button>
-            {picker && <RNDateTimePicker mode="time"
+            {picker && <RNDateTimePicker mode={"time"}
                 onTouchCancel={() => setPicker(false)}
                 value={new Date(schedule.hour)}
                 onChange={(e) => {
-                    const hour = (new Date(e.nativeEvent.timestamp)).toISOString();
-                    setFieldSchedule('hour', hour)
+                    const date = (new Date(e.nativeEvent.timestamp)).toISOString();
+                    setFieldSchedule('hour', date)
                     setPicker(false)
                 }} />
             }
-            <Button mode="outlined" onPress={add}>
-                <Text>Enviar</Text>
-            </Button>
+            {
+                schedule.reminder_type === 'SCHEDULED' && <>
+                    <Select label="Dia da semana"
+                        options={weekDayOptions}
+                        value={schedule.week_day}
+                        onSelect={o => setFieldSchedule('week_day', o.value)}
+                    />
+
+                </>
+            }
+
+            {
+                schedule.reminder_type === 'SINGLE' && <>
+                    <Button mode="contained" style={{ marginBottom: 10 }} onPress={() => setPickerDate(state => !state)}>
+                        Data:  {moment(schedule.date).format('DD/MM/YYYY')}
+                    </Button>
+                    {pickerDate && <RNDateTimePicker mode={"date"}
+                        onTouchCancel={() => setPickerDate(false)}
+                        value={new Date(schedule.hour)}
+                        minimumDate={new Date()}
+                        onChange={(e) => {
+                            const date = (new Date(e.nativeEvent.timestamp)).toISOString();
+                            setFieldSchedule('date', date)
+                            setPickerDate(false)
+                        }} />
+                    }
+                </>
+            }
+            <TextInput style={{ marginBottom: 10 }} value={schedule.dose} mode="outlined" label={'Dose'} onChangeText={e => setFieldSchedule('dose', e)} />
+            <TextInput label={'Quantidade'} style={{ marginBottom: 10 }} mode="outlined" keyboardType="number-pad" value={schedule.quantity.toString()} onChangeText={e => setFieldSchedule('quantity', e)} />
+            {isLoading ? <ActivityIndicator size={'small'} />
+                : <Button mode="outlined" onPress={add}>
+                    <Text>Enviar</Text>
+                </Button>}
         </ SafeAreaView >)
 }

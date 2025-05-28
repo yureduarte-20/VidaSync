@@ -1,14 +1,18 @@
+import ScheduleList from "@/components/ui/ScheduleList";
+import { useMedicationStore } from "@/store/MedicationStore";
+import Constants from 'expo-constants';
 import { router } from "expo-router";
-import { SafeAreaView, View } from "react-native";
-import { FAB, useTheme } from 'react-native-paper';
+import { useEffect } from "react";
+import { SafeAreaView } from "react-native";
+import { FAB } from 'react-native-paper';
 export default function Programados() {
-    const theme = useTheme()
-    
+    const { schedules, getSchedulers }  = useMedicationStore()
+    useEffect(() => {
+        getSchedulers()
+    },[])
     return (
-        <SafeAreaView style={{ flex: 1 }}>
-            <View >
-
-            </View>
+        <SafeAreaView style={{ flex: 1, paddingTop: Constants.statusBarHeight }}>
+            <ScheduleList schedules={schedules} />
             <FAB
                 icon="plus"
                 onPress={() => router.navigate('/(app)/(medications)/add-medication')}
