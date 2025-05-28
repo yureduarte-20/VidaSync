@@ -48,7 +48,6 @@ export function SessionProvider({ children }: PropsWithChildren) {
             })
                 .then((data) => {
                     console.log(data)
-                    route.name == '__root' && router.replace('/(app)/(tabs)/medication')
                 })
                 .catch(console.error)
         }

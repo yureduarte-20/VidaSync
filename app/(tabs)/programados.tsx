@@ -15,7 +15,7 @@ export default function Programados() {
             <ScheduleList schedules={schedules} />
             <FAB
                 icon="plus"
-                onPress={() => router.navigate('/(app)/(medications)/add-medication')}
+                onPress={() => router.navigate('/(medications)/add-medication')}
                 style={{
                     position: 'absolute',
                     margin: 16,
