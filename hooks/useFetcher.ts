@@ -40,7 +40,7 @@ export async function useFetcher<T = any>({ method = 'GET', uri, data, headers }
         })
             .then(
                 async response => response.status < 300 ?
-                    res({ body: await response.json() as T, status: response.status }) : rej({ body: await response.json(), status: response.status, code: 'RESPONSE_ERROR' })
+                    res({ body: response.status === 204 ? {} as  T : await response.json() as T, status: response.status }) : rej({ body: await response.json(), status: response.status, code: 'RESPONSE_ERROR' })
             )
             .catch(e => rej({ message: 'Falha ao tentar se cominicar com o servidor', error: e, code: 'NETWORK_ERROR' }))
 

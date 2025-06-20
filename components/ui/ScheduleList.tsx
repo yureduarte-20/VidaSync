@@ -1,10 +1,7 @@
-
 import { Schedule, WeekDay } from '@/store/MedicationStore';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Avatar, Divider, List, MD3Colors, Text } from 'react-native-paper';
-
-
+import { Avatar, Divider, IconButton, List, MD3Colors, Menu, Text } from 'react-native-paper';
 
 interface ScheduleListProps {
     schedules: Schedule[];
@@ -13,14 +10,28 @@ interface ScheduleListProps {
     onScheduleDelete?: (schedule: Schedule) => void;
 }
 
-const ScheduleList: React.FC<ScheduleListProps> = ({
-    schedules,
-    onSchedulePress,
-    onScheduleEdit,
-    onScheduleDelete
+// Componente de item de lista extraído para gerenciar seu próprio estado de menu
+const ScheduleItem = ({ item, onSchedulePress, onScheduleEdit, onScheduleDelete }: {
+    item: Schedule;
+    onSchedulePress?: (schedule: Schedule) => void;
+    onScheduleEdit?: (schedule: Schedule) => void;
+    onScheduleDelete?: (schedule: Schedule) => void;
 }) => {
+    const [menuVisible, setMenuVisible] = useState(false);
 
-    // Função para formatar o dia da semana
+    const openMenu = () => setMenuVisible(true);
+    const closeMenu = () => setMenuVisible(false);
+
+    const handleEdit = () => {
+        onScheduleEdit?.(item);
+        closeMenu();
+    };
+
+    const handleDelete = () => {
+        onScheduleDelete?.(item);
+        closeMenu();
+    };
+
     const formatWeekDay = (weekDay?: WeekDay): string => {
         const weekDayMap: Record<WeekDay, string> = {
             MON: 'Segunda',
@@ -34,19 +45,16 @@ const ScheduleList: React.FC<ScheduleListProps> = ({
         return weekDay ? weekDayMap[weekDay] : '';
     };
 
-    // Função para formatar a data
     const formatDate = (date?: string | Date): string => {
         if (!date) return '';
         const dateObj = typeof date === 'string' ? new Date(date) : date;
         return dateObj.toLocaleDateString('pt-BR');
     };
 
-    // Função para obter o ícone baseado no tipo de lembrete
     const getReminderIcon = (reminderType: "SCHEDULED" | "SINGLE"): string => {
         return reminderType === 'SCHEDULED' ? 'calendar-sync' : 'calendar-edit';
     };
 
-    // Função para obter a descrição do tipo de lembrete
     const getReminderDescription = (schedule: Schedule): string => {
         if (schedule.reminder_type === 'SCHEDULED') {
             return schedule.week_day ? formatWeekDay(schedule.week_day) : 'Agendado';
@@ -55,7 +63,7 @@ const ScheduleList: React.FC<ScheduleListProps> = ({
         }
     };
 
-    const renderScheduleItem = useCallback(({ item }: { item: Schedule }) => (
+    return (
         <List.Item
             title={item.medication?.name || `Medicamento ${item.medication_id}`}
             description={`${item.dose} • ${item.quantity} ${item.quantity === 1 ? 'dose' : 'doses'} • ${item.hour}`}
@@ -73,17 +81,55 @@ const ScheduleList: React.FC<ScheduleListProps> = ({
                         {getReminderDescription(item)}
                     </Text>
                     {(onScheduleEdit || onScheduleDelete) && (
-                        <List.Icon
-                            {...props}
-                            icon="dots-vertical"
-                        />
+                        <Menu
+                            visible={menuVisible}
+                            onDismiss={closeMenu}
+                            anchor={
+                                <IconButton
+                                    {...props}
+                                    icon="dots-vertical"
+                                    onPress={openMenu}
+                                />
+                            }>
+                            {onScheduleEdit && (
+                                <Menu.Item
+                                    onPress={handleEdit}
+                                    title="Editar"
+                                    leadingIcon="pencil-outline"
+                                />
+                            )}
+                            {onScheduleDelete && (
+                                <Menu.Item
+                                    onPress={handleDelete}
+                                    title="Apagar"
+                                    leadingIcon="trash-can-outline"
+                                />
+                            )}
+                        </Menu>
                     )}
                 </View>
             )}
             onPress={() => onSchedulePress?.(item)}
             style={styles.listItem}
         />
-    ), []);
+    );
+};
+
+const ScheduleList: React.FC<ScheduleListProps> = ({
+    schedules,
+    onSchedulePress,
+    onScheduleEdit,
+    onScheduleDelete
+}) => {
+
+    const renderScheduleItem = useCallback(({ item }: { item: Schedule }) => (
+        <ScheduleItem
+            item={item}
+            onSchedulePress={onSchedulePress}
+            onScheduleEdit={onScheduleEdit}
+            onScheduleDelete={onScheduleDelete}
+        />
+    ), [onSchedulePress, onScheduleEdit, onScheduleDelete]);
 
     const renderSeparator = () => <Divider />;
 
@@ -119,7 +165,6 @@ const styles = StyleSheet.create({
     rightContainer: {
         alignItems: 'flex-end',
         justifyContent: 'center',
-        paddingRight: 8,
     },
     scheduleType: {
         color: '#666',

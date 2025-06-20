@@ -1,110 +1,196 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useFetcher } from '@/hooks/useFetcher';
+import { User, useSession } from '@/store/AuthenticationStore';
+import { useSnackbar } from '@/store/SnackbarContext';
+import Constants from 'expo-constants';
+import React, { useCallback, useEffect, useState } from 'react';
+import { SafeAreaView, StyleSheet, ToastAndroid, View } from 'react-native';
+import { Avatar, Button, Text, TextInput } from 'react-native-paper';
+// URL base da API de avatares
+const AVATAR_API_URL = 'https://ui-avatars.com/api/';
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
-  );
+export default function ProfileScreen() {
+  
+    const { session, signOut, updateUser } =  useSession ();
+    const { showSnackbar } = useSnackbar();
+    const [user, setUser] = useState<User>()
+    const fetcher = useCallback(useFetcher, []);
+    // Estado para controlar o modo de edição
+    const [isEditing, setIsEditing] = useState(false);
+    // Estado para o formulário de edição
+    const [name, setName] = useState(user?.name || '');
+    const [email, setEmail] = useState(user?.email || '');
+    // Estado para o loading do salvamento
+    const [isLoading, setIsLoading] = useState(false);
+
+    async function loadProfile()
+    {
+      const { body } = await fetcher<User>({
+          uri: '/user',
+          method: 'GET',
+          headers:{
+            'Authorization': 'Bearer ' + session
+          }
+        })
+        setUser(body)
+        setEmail(body.email)
+        setName(body.name)
+    }
+    // Sincroniza o estado do formulário se o usuário do store mudar
+    useEffect(() => {
+        loadProfile()
+    }, []);
+    
+
+    if (!user) {
+        // Se por algum motivo não houver usuário, exibe uma mensagem ou tela de login
+        return (
+            <SafeAreaView style={styles.container}>
+                <Text variant="headlineMedium">Usuário não encontrado.</Text>
+            </SafeAreaView>
+        );
+    }
+    
+    // Constrói a URL do avatar dinamicamente
+    const avatarUrl = `${AVATAR_API_URL}?name=${user.name.replace(/\s/g, '+')}&size=128&background=764abc&color=fff`;
+
+    const handleEdit = () => {
+        setIsEditing(true);
+    };
+
+    const handleCancel = () => {
+        // Restaura os valores originais
+        setName(user.name);
+        setEmail(user.email);
+        setIsEditing(false);
+    };
+
+    const handleSave = async () => {
+        if (!name.trim() || !email.trim()) {
+            showSnackbar("Nome e e-mail não podem estar vazios.");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await updateUser({ name, email });
+            await loadProfile()
+            ToastAndroid.show('Perfil atualizado com sucesso!', ToastAndroid.SHORT);
+            setIsEditing(false);
+        } catch (error) {
+            console.error(error);
+            showSnackbar("Falha ao atualizar o perfil. Tente novamente.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <View style={styles.avatarContainer}>
+                <Avatar.Image size={128} source={{ uri: avatarUrl }} />
+                {!isEditing && (
+                    <Text variant="headlineSmall" style={styles.nameText}>
+                        {user.name}
+                    </Text>
+                )}
+            </View>
+
+            <View style={styles.formContainer}>
+                <TextInput
+                    label="Nome Completo"
+                    value={name}
+                    onChangeText={setName}
+                    mode="outlined"
+                    style={styles.input}
+                    disabled={!isEditing || isLoading}
+                />
+                <TextInput
+                    label="E-mail"
+                    value={email}
+                    onChangeText={setEmail}
+                    mode="outlined"
+                    style={styles.input}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    disabled={!isEditing || isLoading}
+                />
+            </View>
+
+            <View style={styles.buttonContainer}>
+                {isEditing ? (
+                    <>
+                        <Button
+                            mode="contained"
+                            onPress={handleSave}
+                            style={styles.button}
+                            icon="check"
+                        >
+                            Salvar
+                        </Button>
+                        <Button
+                            mode="outlined"
+                            onPress={handleCancel}
+                            style={styles.button}
+                            icon="cancel"
+                        >
+                            Cancelar
+                        </Button>
+                    </>
+                ) : (
+                    <Button
+                        mode="contained"
+                        onPress={handleEdit}
+                        style={styles.button}
+                        icon="pencil"
+                    >
+                        Editar Perfil
+                    </Button>
+                )}
+                 <Button
+                    mode="text"
+                    onPress={signOut}
+                    style={styles.logoutButton}
+                    textColor='red'
+                >
+                    Sair (Logout)
+                </Button>
+            </View>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+    container: {
+        flex: 1,
+        alignItems: 'center',
+        padding: 20,
+        paddingTop: Constants.statusBarHeight
+    },
+    avatarContainer: {
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    nameText: {
+        marginTop: 16,
+    },
+    formContainer: {
+        width: '100%',
+        marginBottom: 24,
+    },
+    input: {
+        marginBottom: 16,
+    },
+    buttonContainer: {
+        width: '100%',
+        alignItems: 'center',
+    },
+    button: {
+        width: '80%',
+        marginBottom: 12,
+    },
+    logoutButton: {
+        marginTop: 20,
+    }
 });

@@ -1,6 +1,4 @@
 import { useFetcher } from '@/hooks/useFetcher';
-import { useRoute } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
 import { createContext, use, useCallback, useEffect, type PropsWithChildren } from 'react';
 import { useStorageState } from '../hooks/useStorageState';
 import { useSnackbar } from './SnackbarContext';
@@ -8,13 +6,20 @@ export type Credentials = {
     email: string;
     password: string;
 }
+export type User = {
+    id: number;
+    name: string;
+    email: string;
+}
 const AuthContext = createContext<{
     signIn: (credentials: Credentials) => Promise<void>;
     signOut: () => void;
     session?: string | null;
+    updateUser: (user: Omit<User, 'id'>) => Promise<void>
     isLoading: boolean;
 }>({
     signIn: (credentials: Credentials) => Promise.resolve(),
+    updateUser: (user: Omit<User, 'id'>) => Promise.resolve(),
     signOut: () => null,
     session: null,
     isLoading: false,
@@ -33,8 +38,6 @@ export function useSession() {
 export function SessionProvider({ children }: PropsWithChildren) {
     const [[isLoading, session], setSession] = useStorageState('session');
     const fetcher = useCallback(useFetcher, []);
-    const router = useRouter()
-    const route = useRoute()
     const  { showSnackbar } = useSnackbar()
     useEffect(() => {
         if (!isLoading && session) {
@@ -52,6 +55,20 @@ export function SessionProvider({ children }: PropsWithChildren) {
                 .catch(console.error)
         }
     }, [isLoading])
+    async function updateUser(user: Omit<User, 'id'>){
+        try {
+            await fetcher({
+                uri: '/profile',
+                method: 'PUT',
+                data: user,
+                headers:{
+                    Authorization: `Bearer ${session}`
+                }
+            })
+        } catch (e: any) {
+            throw e;
+        }
+    }
     async function sigIn(credentials: Credentials) {
         try {
             const { body } = await fetcher({
@@ -75,6 +92,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
                     setSession(null);
                 },
                 session,
+                updateUser,
                 isLoading,
             }}>
             {children}

@@ -1,18 +1,31 @@
 import ScheduleList from "@/components/ui/ScheduleList";
-import { useMedicationStore } from "@/store/MedicationStore";
+import { Schedule, useMedicationStore } from "@/store/MedicationStore";
+import { useSnackbar } from "@/store/SnackbarContext";
 import Constants from 'expo-constants';
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { SafeAreaView } from "react-native";
 import { FAB } from 'react-native-paper';
 export default function Programados() {
-    const { schedules, getSchedulers }  = useMedicationStore()
+    const { schedules, getSchedulers, deleteSchedule  }  = useMedicationStore()
+    const { showSnackbar } = useSnackbar()
+    const router = useRouter()
     useEffect(() => {
         getSchedulers()
-    },[])
+    },[]);
+    const remove = async   (s:Schedule) =>  
+    {
+        await deleteSchedule(s.id)
+        await getSchedulers()
+        showSnackbar('Deletado com sucesso!')
+    }
     return (
         <SafeAreaView style={{ flex: 1, paddingTop: Constants.statusBarHeight }}>
-            <ScheduleList schedules={schedules} />
+            <ScheduleList schedules={schedules} 
+                onScheduleEdit={s =>  router.navigate({
+                    pathname: '/edit-schedule/' + s.id
+                })}
+                onScheduleDelete={remove} />
             <FAB
                 icon="plus"
                 onPress={() => router.navigate('/(medications)/add-medication')}

@@ -12,7 +12,7 @@ export type MedicationType = {
     reminders?: Schedule[]
 }
 export type Presentation = MedicationType['presentation']
-export type WeekDay = 'MON' | "TUE" | "WED" | "THU" | "FRI" | "SAT"| "SUN";
+export type WeekDay = 'MON' | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 export type MedicationIdType = MedicationType['id'];
 export type Schedule = {
     id?: number
@@ -35,7 +35,9 @@ export type MedicationContextType = {
     createSchedule(schedule: Schedule): Promise<Schedule>;
     findMedication(id: MedicationIdType): Promise<MedicationType>
     getMedications(): Promise<MedicationType[]>
-    getSchedulers() : Promise<Schedule[]>
+    getSchedulers(): Promise<Schedule[]>
+    deleteSchedule(id: ScheduleIdType): Promise<void>
+    updateSchedule(id: ScheduleIdType, body: Schedule): Promise<void>
 };
 export const MedicationContext = createContext<MedicationContextType>({
     medications: [],
@@ -44,7 +46,9 @@ export const MedicationContext = createContext<MedicationContextType>({
     createSchedule: (schedule: Schedule) => Promise.reject('not implemented'),
     findMedication: (id: MedicationIdType) => Promise.reject('not implemented'),
     getSchedulers: () => Promise.reject('not implemented'),
-    getMedications: () => Promise.reject('not implemented')
+    getMedications: () => Promise.reject('not implemented'),
+    deleteSchedule: (id: ScheduleIdType) => Promise.reject('not implemented'),
+    updateSchedule: (id: ScheduleIdType, body: Schedule) => Promise.reject('not implemented'),
 });
 
 export function MedicationProvider(props: PropsWithChildren) {
@@ -59,6 +63,48 @@ export function MedicationProvider(props: PropsWithChildren) {
             getMedications()
         }
     }, [session, isLoading])
+    const updateSchedule = async (id: ScheduleIdType, schedule: Schedule) => {
+        let body = {}
+        if (schedule.reminder_type == 'SINGLE') {
+            body = {
+                dose: schedule.dose,
+                quantity: schedule.quantity,
+                hour: schedule.hour ? moment(schedule.hour).format('hh:mm') : null,
+                reminder_type: schedule.reminder_type,
+                date: schedule.date,
+                medication_id: schedule.medication_id
+            }
+        } else {
+            body = {
+                dose: schedule.dose,
+                week_day: schedule.week_day?.toString(),
+                quantity: schedule.quantity,
+                hour: schedule.hour ? moment(schedule.hour).format('hh:mm') : null,
+                reminder_type: schedule.reminder_type,
+                medication_id: schedule.medication_id
+            }
+            
+        }
+        console.log(JSON.stringify(body))
+        try {
+            await fetcher({
+                uri: '/medication-reminder/' + id,
+                method: 'PUT', data: body,
+                headers: {
+                    'Authorization': 'Bearer ' + session
+                }
+            })
+            await getMedications();
+        } catch (e: any) {
+            if (e.code == 'RESPONSE_ERROR') {
+                showSnackbar(e.body.message)
+            } else if (e.code == 'NETWORK_ERROR') {
+                showSnackbar(e.message)
+            }
+            throw e
+        }
+
+    }
     const getMedications = async () => {
         const { body } = await fetcher<MedicationType[]>({
             uri: '/medication?paginate=false', method: 'GET',
@@ -109,6 +155,15 @@ export function MedicationProvider(props: PropsWithChildren) {
             throw e;
         }
     }
+
+    const deleteSchedule = async (id: ScheduleIdType) => {
+        await fetcher({
+            uri: '/medication-reminder/' + id, method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + session
+            }
+        })
+    }
     const createSchedule = async (schedule: Schedule) => {
         try {
             const contentBody = {
@@ -144,7 +199,7 @@ export function MedicationProvider(props: PropsWithChildren) {
         return body;
     }
     return (
-        <MedicationContext.Provider value={{ getSchedulers, medications: medications, addMedication, createSchedule, findMedication, schedules, getMedications }}>
+        <MedicationContext.Provider value={{ updateSchedule, getSchedulers, medications: medications, addMedication, createSchedule, findMedication, schedules, getMedications, deleteSchedule }}>
             {props.children}
         </MedicationContext.Provider>
     )
